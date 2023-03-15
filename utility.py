@@ -95,7 +95,8 @@ def latency(start,dest,size,rho):
     
     d = np.random.exponential(scale=96/c) # Queuing Delay Calculation
      
-    delay = rho+((size)/c)*1000+d # Total delay latency
+    delay = rho+((size)/c)+d*1000 # Total delay latency
+ 
     return delay
 
 # Returns depth of block with given block ID, if not found, returns -1

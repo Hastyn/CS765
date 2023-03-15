@@ -5,7 +5,7 @@ import numpy as np
 
 # Creates a random graph
 
-def graph_creation(peers):
+def graph_creation(peers,zeta):
     
     degree=[0 for i in range(peers)] # Keeping a count of degree of each vertex
 
@@ -14,7 +14,10 @@ def graph_creation(peers):
     saturated=[] # Nodes that have achieved their maximum degree
     
     for i in range(peers):
-        num=np.random.choice([4,5,6,7,8]) # Choose the degree of the current node randomly
+        if i==0:
+            num=int(zeta*peers/100) 
+        else: 
+            num=np.random.choice([4,5,6,7,8]) # Choose the degree of the current node randomly
         
         if num<=degree[i]:
             # If current degree is more than the choice, then skip

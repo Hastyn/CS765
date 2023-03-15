@@ -23,6 +23,7 @@ if __name__=='__main__':
     parser.add_argument("--meantransactiontime", help='mean time between arrival of transactions in ms',type=float)
     parser.add_argument("--meanblocktime", help='mean time between arrival of blocks in ms',type=float)
     parser.add_argument("--zeta", help='percentage of honest nodes an adversary is connected to',type=float)
+    parser.add_argument("--advminingpower", help='percentage of hashing power the adversary has',type=float)
 
     
     args=parser.parse_args()
@@ -32,9 +33,10 @@ if __name__=='__main__':
     meantransactiontime=args.meantransactiontime # Mean transaction time in ms
     meanblocktime=args.meanblocktime # Mean block arrival time in ms
     zeta = args.zeta #Percentage of honest nodes an adversary is connected to
+    advhashingpower = args.advminingpower #Percentage of hashing power the adversary has
 
     if((args.peers is None) or (args.slow is None) or (args.lowcpu is None) or (args.meanblocktime is None) or (args.meantransactiontime is None) or (args.zeta is None)):
-        print("usage: python simulator.py [--peers PEERS] [--slow SLOW] [--lowcpu LOWCPU] [--meantransactiontime MEANTRANSACTIONTIME] [--meanblocktime MEANBLOCKTIME] [--zeta ZETA]")
+        print("usage: python simulator.py [--peers PEERS] [--slow SLOW] [--lowcpu LOWCPU] [--meantransactiontime MEANTRANSACTIONTIME] [--meanblocktime MEANBLOCKTIME] [--zeta ZETA] [--advhashingpower ADVHASHINGPOWER]")
         exit(0)
         
     # Defined format of tasks below
@@ -49,7 +51,7 @@ if __name__=='__main__':
     
      
     num_low =(int)(peers*lowcpu/100) #Number of nodes with low cpu capabilities
-    adv_hash = zeta/100                             
+    adv_hash = advhashingpower/100                             
     low_hash=(1.0-adv_hash)/(num_low+(peers-num_low)*10)
     high_hash=(1-adv_hash)*10.0/(num_low+(peers-num_low)*10)   
     
@@ -93,9 +95,9 @@ if __name__=='__main__':
             
     # Graph Creation
 
-    edges=graph_creation(peers)
+    edges=graph_creation(peers,zeta)
     while(not graph_connected(edges,peers)):
-        edges=graph_creation(peers)
+        edges=graph_creation(peers,zeta)
         
         
     for i in range(peers):
@@ -284,8 +286,8 @@ for i in range(peers):
     f= open(s,'w')
     
     for block in peer_list[i].received_blocks:
-        f.write(str(block.blk_id)+" "+str(block.prev_blk_id)+" "+str(block.time_of_arrival)+"\n")
-        dump(block)
+        f.write(str(block.blk_id)+" "+str(block.prev_blk_id)+" "+str(block.time_of_arrival)+" "+str(block.miner_id)+"\n")
+        # dump(block)
     f.close()
     # print(s)
     show(s)
