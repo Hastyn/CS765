@@ -36,3 +36,5 @@ class Peer:
         self.received_blocks=[]                     # List of all blocks received by the Peer
         self.max_depth=0                            # Maximum depth of the blockchain tree of the Peer till now
         self.hashingpower=hashingpower              # Actual percentage of hashing power possessed by node in the network depending on whether 'highcpu' or 'lowcpu'
+        self.lead = 0                               # Lead of the private chain of this peer 
+        self.private_chain = []                     # Blocks in the private chain of this peer

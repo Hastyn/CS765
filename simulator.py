@@ -174,6 +174,68 @@ if __name__=='__main__':
 
                 continue
             
+            if peer_list[task[1]].id==block.miner_id and block.miner_id==0:
+                block.depth=parent_depth+1
+                if(validate(block,peer_list[task[1]])):
+                # Dont update max depth as this  block is not public,update list of received blocks, along with a sanity check that owner is correct
+                    # peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,block.depth)
+                    peer_list[task[1]].received_blocks.append(block)
+                    assert(block.owner==task[1])
+                else:
+                    dump(block)
+                    print("Validation failed")
+                    break
+                peer_list[0].lead+=1
+                peer_list[0].private_chain.append(block)
+                # No broadcasting to neighbours as private chain
+                newtask = block_generation(peer_list[task[1]],meanblocktime,task[0])
+                task_list.put(newtask)
+                continue
+            
+            elif peer_list[task[1]].id==0:
+                block.depth=parent_depth+1
+                if(validate(block,peer_list[task[1]])):
+                # Update list of received blocks, along with a sanity check that owner is correct
+                    peer_list[task[1]].received_blocks.append(block)
+                    assert(block.owner==task[1])
+                else:
+                    dump(block)
+                    print("Validation failed")
+                    break
+                
+                if peer_list[task[1]].max_depth>=block.depth:
+                    # Lead does not change as chain to which block is added is not longest 
+                    add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+                else:
+                    peer_list[task[1]].max_depth=block.depth
+                    # add_cache(task_list,peer_list,peer_list[task[1]],block,rho) to be checked
+                    
+                    if peer_list[task[1]].lead==1:
+                        #Broadcast 1he block in the private chain
+                        for priv_blk in peer_list[task[1]].private_chain:
+                            for adjacent in peer_list[task[1]].neighbors:
+                                ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
+                                task_list.put(ntask)
+                        peer_list[task[1]].private_chain = []
+                        peer_list[task[1]].lead=0 
+
+                    elif peer_list[task[1]].lead==2:
+                        #Broadcast all blocks in private chain
+                        for priv_blk in peer_list[task[1]].private_chain:
+                            for adjacent in peer_list[task[1]].neighbors:
+                                ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
+                                task_list.put(ntask)
+                        peer_list[task[1]].private_chain = []
+                        peer_list[task[1]].lead=0 
+
+                    elif peer_list[task[1]].lead>2:
+                        for adjacent in peer_list[task[1]].neighbors:
+                                ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
+                                task_list.put(ntask)                    
+                        peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
+                        peer_list[task[1]].lead-=1 
+
+
             # Updating depth of block
             block.depth=parent_depth+1
             
@@ -188,6 +250,7 @@ if __name__=='__main__':
                 dump(block)
                 print("Validation failed")
                 break
+            
             
             # Broadcast to neighbors, except where it is received from
                 
