@@ -22,7 +22,7 @@ def transaction_generation(peer,block,meantransactiontime,current_time):
     
     transaction=Transaction(peer.id,dest,np.random.random()*2,8000,uuid.uuid4())
     
-    dump_transaction(transaction)
+    # dump_transaction(transaction)
     
     # Task is generated in the correct format specified in simulator.py 
     return ([current_time+inter_arrival_time,peer.id,'gen_transaction',transaction])
@@ -134,6 +134,26 @@ def broadcast(task,start,dest,rho):
     # Details of Transaction/Block is in task[4] (can use reference here, because on processing we always create a new copy of Block and Transaction is same for different peers)
     
     newtask = [task[0]+delay, dest.id , task[2] , start.id , task[4]]
+    
+    return newtask
+
+# Broadcast a certain block (used for broadcasting private blocks)
+
+def broadcast_block(time,priv_blk,start,dest,rho):
+    
+    # Calculation of size of packet to be transmitted
+    size = len(priv_blk.transactions)*8000 # Since each transaction is of 1KB
+            
+    # Calculating the delay latency to find at what time the event is to be scheduled
+    delay = latency(start,dest,size,rho)
+    
+    # Creating a new task at time = current time + delay
+    # ID of node receiving the message is dest.id
+    # task[2] refers to type of task (received_block or received_transaction)
+    # ID of node from which message is received is start.id
+    # Details of Transaction/Block is in task[4] (can use reference here, because on processing we always create a new copy of Block and Transaction is same for different peers)
+    
+    newtask = [time+delay, dest.id , 'received_block' , start.id , priv_blk]
     
     return newtask
 
@@ -311,7 +331,7 @@ def dump(block):
     print("Block Miner ID: ",block.miner_id)
     print("Block Owner ID: ",block.owner)
     print("Transactions: ",len(block.transactions))
-    dump_transactions(block.transactions)
+    # dump_transactions(block.transactions)
     print("Depth: ",block.depth)
     print("Arrival Time: " ,block.time_of_arrival)
     print("Balances: ",block.balances)

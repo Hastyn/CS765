@@ -125,7 +125,7 @@ if __name__=='__main__':
     
     print("--------START------------")
     
-    while((not task_list.empty()) and (count<=50000) ):
+    while((not task_list.empty()) and (count<=1000) ):
         
         # Get earliest scheduled task in task list
         
@@ -141,7 +141,7 @@ if __name__=='__main__':
         # else:
         #     print("Transaction ID:",task[3].transaction_id)
         
-        count+=1 # Incrementing count
+       
         
         if task[2] == 'received_block':
             
@@ -157,9 +157,11 @@ if __name__=='__main__':
             
             #If no longer longest chain, drop own block
             if(block.miner_id==peer_list[task[1]].id):
-                if(parent_depth!=peer_list[task[1]].max_depth):
+                if(parent_depth<peer_list[task[1]].max_depth):
                     continue
             
+            count+=1 # Incrementing count
+
             # If parent does not exist, cache block
             
             if parent_depth == -1:
@@ -234,6 +236,7 @@ if __name__=='__main__':
                                 task_list.put(ntask)                    
                         peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
                         peer_list[task[1]].lead-=1 
+                continue
 
 
             # Updating depth of block
@@ -299,7 +302,7 @@ if __name__=='__main__':
         elif task[2] == 'gen_block':
             
             #If not longest chain, stop mining
-            if(task[3].depth!=peer_list[task[1]].max_depth+1):
+            if(task[3].depth<peer_list[task[1]].max_depth+1):
                 continue
             
             #Validate transaction before receiving, but not update, since updation is done in received_block
