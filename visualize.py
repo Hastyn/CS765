@@ -20,7 +20,11 @@ def show(file_name):
         else:
             # tree.create_node(str(line[2]),line[0],line[1])
             tree.create_node(str(line[2])+"\n"+str(line[0]),line[0],line[1])
-    
+
+        # if line[3] == '0':
+        #     node = tree.get_node(line[0])
+        #     node.set_node_style('filled', 'lightblue')                
+            
     tree.to_graphviz(file_name[:-3]+"dot")
     # output=subprocess.check_output(['dot','-Tpdf',file_name[:-3]+"dot"])
     
