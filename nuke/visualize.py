@@ -37,7 +37,7 @@ def show1(file_name):
     # f.close()
 
     (graph,) = pydot.graph_from_dot_file(file_name[:-3]+"dot")
-    graph.write_png(file_name[:-3]+'.png')
+    graph.write_png(file_name[:-3]+'png')
 
     # subprocess.check_call(['rm','temp.dot'])
     # subprocess.check_call(['rm',file_name])

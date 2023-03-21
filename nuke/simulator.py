@@ -16,6 +16,9 @@ faulthandler.enable()
 sys.setrecursionlimit(10**6)
 
 if __name__=='__main__':
+
+    np.random.seed(0)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--peers", help='number of peers',type=int)
     parser.add_argument("--slow", help='percentage of slow nodes',type=float)
@@ -77,6 +80,7 @@ if __name__=='__main__':
     for i in ele:
         # peer_list[i].speed='lowcpu'
         peer_list[i].hashingpower=low_hash
+        # print(i)
         
     peer_list[0].hashingpower = adv_hash
     # Generating the original genesis block
@@ -127,7 +131,7 @@ if __name__=='__main__':
     
     print("--------START------------")
     
-    while((not task_list.empty()) and (count<=500) ):
+    while((not task_list.empty()) and (count<=100) ):
         
         # Get earliest scheduled task in task list
         
