@@ -40,10 +40,12 @@ def find_mining_block(peer):
             max_depth=blk.depth
             time_of_arrival=blk.time_of_arrival
             block=blk
-        elif blk.depth==max_depth and blk.time_of_arrival<time_of_arrival:
+        elif blk.depth==max_depth and blk.miner_id == peer.id and peer.id==0:
             time_of_arrival=blk.time_of_arrival
-            block=blk            
-    
+            block=blk
+        elif blk.depth==max_depth and blk.time_of_arrival<time_of_arrival and (block==None or block.miner_id != peer.id or peer.id!=0):
+            time_of_arrival=blk.time_of_arrival
+            block=blk
     return block
 
 # Generation of a new block 
@@ -257,13 +259,13 @@ def add_cache(task_list,peer_list,peer,block,rho):
             peer.max_depth=max(peer.max_depth,nexttask[4].depth) # Updating the maximum depth of the Peer Object
             peer.received_blocks.append(nexttask[4]) # Appending the new block to the list of blocks
             
-            # Broadcasting this new block to neighbors
-            
-            for adjacent in peer.neighbors:
-                if adjacent == nexttask[3]:
-                    continue
-                
-                task_list.put(broadcast(nexttask,peer,peer_list[adjacent],rho))
+            # Broadcasting this new block to neighbors if not the adversary
+            if peer.id!=0:
+                for adjacent in peer.neighbors:
+                    if adjacent == nexttask[3]:
+                        continue
+                    
+                    task_list.put(broadcast(nexttask,peer,peer_list[adjacent],rho))
             
             # Checking if there are any other blocks to add from cache
             check=1
