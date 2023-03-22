@@ -11,16 +11,25 @@ def transaction_generation(peer,block,meantransactiontime,current_time):
     inter_arrival_time = np.random.exponential(scale=meantransactiontime) # Generating the inter-arrival time between 2 transactions
     
     # Randomly fixing the destination ID of Peer, ensuring that sender is not the same as destination
-    dest=peer.id 
+    # dest=peer.id 
     
-    while dest==peer.id:
-        dest=np.random.randint(len(block.balances))
+    # while dest==peer.id:
+    #     dest=np.random.randint(len(block.balances))
         
     # Creating a transaction object with the parameters described above
     # Number of coins is taken as a random small amount
     # This pretty much ensures that balance never goes below 0 and that all transaction generated are valid
     
-    transaction=Transaction(peer.id,dest,np.random.random()*2,8000,uuid.uuid4())
+    while(True):
+        start = np.random.randint(len(block.balances))
+        dest = np.random.randint(len(block.balances))
+        coins = np.random.random()*2
+        balances = block.balances
+        if(balances[start]>=coins):
+            break 
+
+    transaction=Transaction(start,dest,coins,8000,uuid.uuid4())
+    # transaction=Transaction(peer.id,dest,np.random.random()*2,8000,uuid.uuid4())
     
     # dump_transaction(transaction)
     
@@ -40,10 +49,12 @@ def find_mining_block(peer):
             max_depth=blk.depth
             time_of_arrival=blk.time_of_arrival
             block=blk
-        elif blk.depth==max_depth and blk.time_of_arrival<time_of_arrival:
+        elif blk.depth==max_depth and blk.miner_id == peer.id and peer.id==0:
             time_of_arrival=blk.time_of_arrival
-            block=blk            
-    
+            block=blk
+        elif blk.depth==max_depth and blk.time_of_arrival<time_of_arrival and (block==None or block.miner_id != peer.id or peer.id!=0):
+            time_of_arrival=blk.time_of_arrival
+            block=blk
     return block
 
 # Generation of a new block 
@@ -56,6 +67,10 @@ def block_generation(peer,meanblocktime,current_time):
     # Finding the block in the chain that is to be mined upon
     prev_block = find_mining_block(peer)
     prev_blk_id = prev_block.blk_id
+    
+    print("Mean of exp dist "+str(meanblocktime/peer.hashingpower)+" of peer "+str(peer.id))
+    print("Current time "+str(current_time))
+    print("BLock will be mined in "+str(inter_arrival_time))
     
     # Choosing a random number of transactions from the generated transactions with a cap of 999 (1 left for coinbase transaction)
     # Since the transactions are generated while keeping the balances >=0 for all nodes, all transactions are valid
@@ -180,7 +195,7 @@ def validate(block,peer):
     
     # Get balances of all peers till the previous block ID
     balances = get_balance(peer,block.prev_blk_id).copy()
-    
+   
     # For each transaction, we update the balances of the peers
     
     for transaction in block.transactions:
@@ -257,13 +272,13 @@ def add_cache(task_list,peer_list,peer,block,rho):
             peer.max_depth=max(peer.max_depth,nexttask[4].depth) # Updating the maximum depth of the Peer Object
             peer.received_blocks.append(nexttask[4]) # Appending the new block to the list of blocks
             
-            # Broadcasting this new block to neighbors
-            
-            for adjacent in peer.neighbors:
-                if adjacent == nexttask[3]:
-                    continue
-                
-                task_list.put(broadcast(nexttask,peer,peer_list[adjacent],rho))
+            # Broadcasting this new block to neighbors if not the adversary
+            if peer.id!=0:
+                for adjacent in peer.neighbors:
+                    if adjacent == nexttask[3]:
+                        continue
+                    
+                    task_list.put(broadcast(nexttask,peer,peer_list[adjacent],rho))
             
             # Checking if there are any other blocks to add from cache
             check=1

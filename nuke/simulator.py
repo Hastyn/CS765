@@ -16,6 +16,9 @@ faulthandler.enable()
 sys.setrecursionlimit(10**6)
 
 if __name__=='__main__':
+
+    np.random.seed(0)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--peers", help='number of peers',type=int)
     parser.add_argument("--slow", help='percentage of slow nodes',type=float)
@@ -42,7 +45,8 @@ if __name__=='__main__':
     # Defined format of tasks below
     
     #Priority Queue sorts tasks on basis of increasing order of first element, i.e. time
-    
+    is_stubborn = False #boolean parameter true for stubborn mining and false for selfish mining
+
     task_list = PriorityQueue() # [time , peer_ID , type_of_action          , ... ]
                                 # [                 'received_block'        , received_from, Block ]
                                 # [                 'received_transaction'  , received_from , Transaction ]
@@ -51,7 +55,7 @@ if __name__=='__main__':
     
      
     num_low =(int)(peers*lowcpu/100) #Number of nodes with low cpu capabilities
-    adv_hash = advhashingpower/100                             
+    adv_hash = advhashingpower/100                         
     low_hash=(1.0-adv_hash)/(num_low+(peers-num_low)*10)
     high_hash=(1-adv_hash)*10.0/(num_low+(peers-num_low)*10)   
     
@@ -76,6 +80,7 @@ if __name__=='__main__':
     for i in ele:
         # peer_list[i].speed='lowcpu'
         peer_list[i].hashingpower=low_hash
+        # print(i)
         
     peer_list[0].hashingpower = adv_hash
     # Generating the original genesis block
@@ -118,14 +123,15 @@ if __name__=='__main__':
         # Need a gen_block for each node to kickstart the block_generation process
         newtask = block_generation(peer_list[i],meanblocktime,0)
         task_list.put(newtask)
-        dump(newtask[3])
+        # dump(newtask[3])
         # print(newtask)
+
         
     count=0 # Determining point till which to run simulation
     
     print("--------START------------")
     
-    while((not task_list.empty()) and (count<=1000) ):
+    while((not task_list.empty()) and (count<=500) ):
         
         # Get earliest scheduled task in task list
         
@@ -159,9 +165,9 @@ if __name__=='__main__':
             if(block.miner_id==peer_list[task[1]].id):
                 if(parent_depth<peer_list[task[1]].max_depth):
                     continue
-            
+            print(count)
             count+=1 # Incrementing count
-
+            print("Block of "+str(block.miner_id)+" recieved by "+str(task[1]))
             # If parent does not exist, cache block
             
             if parent_depth == -1:
@@ -192,8 +198,7 @@ if __name__=='__main__':
                 # No broadcasting to neighbours as private chain
                 newtask = block_generation(peer_list[task[1]],meanblocktime,task[0])
                 task_list.put(newtask)
-                continue
-            
+                continue           
             elif peer_list[task[1]].id==0:
                 block.depth=parent_depth+1
                 if(validate(block,peer_list[task[1]])):
@@ -207,14 +212,17 @@ if __name__=='__main__':
                 
                 if peer_list[task[1]].max_depth>=block.depth:
                     # Lead does not change as chain to which block is added is not longest 
-                    add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+                    # add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+                    pass
                 else:
                     peer_list[task[1]].max_depth=block.depth
                     # add_cache(task_list,peer_list,peer_list[task[1]],block,rho) to be checked
                     
                     if peer_list[task[1]].lead==1:
                         #Broadcast 1he block in the private chain
+                        print("Lead 1 case")
                         for priv_blk in peer_list[task[1]].private_chain:
+                            peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,priv_blk.depth)
                             for adjacent in peer_list[task[1]].neighbors:
                                 ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
                                 task_list.put(ntask)
@@ -223,19 +231,38 @@ if __name__=='__main__':
 
                     elif peer_list[task[1]].lead==2:
                         #Broadcast all blocks in private chain
-                        for priv_blk in peer_list[task[1]].private_chain:
+                        print("Lead 2 case")
+                        if is_stubborn!=True:
+                            for priv_blk in peer_list[task[1]].private_chain:
+                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,priv_blk.depth)
+                                for adjacent in peer_list[task[1]].neighbors:
+                                    ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
+                                    task_list.put(ntask)
+                            peer_list[task[1]].private_chain = []
+                            peer_list[task[1]].lead=0 
+                        else:
                             for adjacent in peer_list[task[1]].neighbors:
-                                ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
-                                task_list.put(ntask)
-                        peer_list[task[1]].private_chain = []
-                        peer_list[task[1]].lead=0 
+                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,peer_list[task[1]].private_chain[0].depth)
+                                ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
+                                task_list.put(ntask)                    
+                            peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
+                            peer_list[task[1]].lead-=1 
 
                     elif peer_list[task[1]].lead>2:
+                        print("Lead "+str(peer_list[task[1]].lead)+" case")
                         for adjacent in peer_list[task[1]].neighbors:
+                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,peer_list[task[1]].private_chain[0].depth)
                                 ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
                                 task_list.put(ntask)                    
                         peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
                         peer_list[task[1]].lead-=1 
+                    
+                    else:
+                        #Schedule next block generation
+                        newtask = block_generation(peer_list[task[1]],meanblocktime,task[0])
+                        # print("Added only:- ",newtask)
+                        task_list.put(newtask)
+                # add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
                 continue
 
 
@@ -265,7 +292,7 @@ if __name__=='__main__':
                 # print("Added only:- ",ntask)
 
             #Cached blocks can be added back now
-            add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+            # add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
 
             #Schedule next block generation
             newtask = block_generation(peer_list[task[1]],meanblocktime,task[0])
@@ -306,14 +333,16 @@ if __name__=='__main__':
                 continue
             
             #Validate transaction before receiving, but not update, since updation is done in received_block
-            if(validate_not_update(task[3],peer_list[task[1]])):
-                pass
-            else:
+            # if(validate_not_update(task[3],peer_list[task[1]])):
+            #     pass
+            # else:
                 
-                print("Block should be dropped here! Happens in rare cases!")
-                dump(task[3])
-                continue
+            #     print("Block should be dropped here! Happens in rare cases!")
+            #     dump(task[3])
+            #     continue
             
+            print("Generating block: Miner-"+str(task[1])+" Time-"+str(task[0]))
+
             #Add received_block task to use the received_block code
             block=deepcopy(task[3])
             newtask=([task[0],task[1],'received_block',task[1],block])
