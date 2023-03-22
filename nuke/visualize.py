@@ -57,9 +57,9 @@ def show(file_name):
                 tree.create_node(line[2], line[0], data={'color': 'blue'})
         else:
             if line[3] == '0':
-                tree.create_node(f"{line[2]}\n{line[0]}", line[0], line[1], data={'color': 'red'})
+                tree.create_node(f"{line[2]}\n{line[0]}\n{line[3]}", line[0], line[1], data={'color': 'red'})
             else:
-                tree.create_node(f"{line[2]}\n{line[0]}", line[0], line[1], data={'color': 'blue'})
+                tree.create_node(f"{line[2]}\n{line[0]}\n{line[3]}", line[0], line[1], data={'color': 'blue'})
 
     dot = graphviz.Digraph(comment='Tree')
     for node in tree.all_nodes():

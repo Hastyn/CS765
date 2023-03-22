@@ -45,7 +45,7 @@ if __name__=='__main__':
     # Defined format of tasks below
     
     #Priority Queue sorts tasks on basis of increasing order of first element, i.e. time
-    is_stubborn = True #boolean parameter true for stubborn mining and false for selfish mining
+    is_stubborn = False #boolean parameter true for stubborn mining and false for selfish mining
 
     task_list = PriorityQueue() # [time , peer_ID , type_of_action          , ... ]
                                 # [                 'received_block'        , received_from, Block ]
@@ -131,7 +131,7 @@ if __name__=='__main__':
     
     print("--------START------------")
     
-    while((not task_list.empty()) and (count<=100) ):
+    while((not task_list.empty()) and (count<=500) ):
         
         # Get earliest scheduled task in task list
         
@@ -167,7 +167,7 @@ if __name__=='__main__':
                     continue
             print(count)
             count+=1 # Incrementing count
-            
+            print(block.miner_id)
             # If parent does not exist, cache block
             
             if parent_depth == -1:
@@ -229,6 +229,7 @@ if __name__=='__main__':
 
                     elif peer_list[task[1]].lead==2:
                         #Broadcast all blocks in private chain
+                        print("Here")
                         if is_stubborn!=True:
                             for priv_blk in peer_list[task[1]].private_chain:
                                 for adjacent in peer_list[task[1]].neighbors:
@@ -334,6 +335,8 @@ if __name__=='__main__':
                 dump(task[3])
                 continue
             
+            print("Generating block: Miner-"+str(task[1])+" Time-"+str(task[0]))
+
             #Add received_block task to use the received_block code
             block=deepcopy(task[3])
             newtask=([task[0],task[1],'received_block',task[1],block])
