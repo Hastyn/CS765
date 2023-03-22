@@ -220,7 +220,9 @@ if __name__=='__main__':
                     
                     if peer_list[task[1]].lead==1:
                         #Broadcast 1he block in the private chain
+                        print("Lead 1 case")
                         for priv_blk in peer_list[task[1]].private_chain:
+                            peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,priv_blk.depth)
                             for adjacent in peer_list[task[1]].neighbors:
                                 ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
                                 task_list.put(ntask)
@@ -229,9 +231,10 @@ if __name__=='__main__':
 
                     elif peer_list[task[1]].lead==2:
                         #Broadcast all blocks in private chain
-                        print("Here")
+                        print("Lead 2 case")
                         if is_stubborn!=True:
                             for priv_blk in peer_list[task[1]].private_chain:
+                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,priv_blk.depth)
                                 for adjacent in peer_list[task[1]].neighbors:
                                     ntask = broadcast_block(task[0],priv_blk,peer_list[task[1]],peer_list[adjacent],rho)
                                     task_list.put(ntask)
@@ -239,13 +242,16 @@ if __name__=='__main__':
                             peer_list[task[1]].lead=0 
                         else:
                             for adjacent in peer_list[task[1]].neighbors:
-                                    ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
-                                    task_list.put(ntask)                    
+                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,peer_list[task[1]].private_chain[0].depth)
+                                ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
+                                task_list.put(ntask)                    
                             peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
                             peer_list[task[1]].lead-=1 
 
                     elif peer_list[task[1]].lead>2:
+                        print("Lead "+str(peer_list[task[1]].lead)+" case")
                         for adjacent in peer_list[task[1]].neighbors:
+                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,peer_list[task[1]].private_chain[0].depth)
                                 ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
                                 task_list.put(ntask)                    
                         peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
@@ -327,13 +333,13 @@ if __name__=='__main__':
                 continue
             
             #Validate transaction before receiving, but not update, since updation is done in received_block
-            if(validate_not_update(task[3],peer_list[task[1]])):
-                pass
-            else:
+            # if(validate_not_update(task[3],peer_list[task[1]])):
+            #     pass
+            # else:
                 
-                print("Block should be dropped here! Happens in rare cases!")
-                dump(task[3])
-                continue
+            #     print("Block should be dropped here! Happens in rare cases!")
+            #     dump(task[3])
+            #     continue
             
             print("Generating block: Miner-"+str(task[1])+" Time-"+str(task[0]))
 

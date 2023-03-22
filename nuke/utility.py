@@ -11,16 +11,26 @@ def transaction_generation(peer,block,meantransactiontime,current_time):
     inter_arrival_time = np.random.exponential(scale=meantransactiontime) # Generating the inter-arrival time between 2 transactions
     
     # Randomly fixing the destination ID of Peer, ensuring that sender is not the same as destination
-    dest=peer.id 
+    # dest=peer.id 
     
-    while dest==peer.id:
-        dest=np.random.randint(len(block.balances))
+    # while dest==peer.id:
+    #     dest=np.random.randint(len(block.balances))
         
     # Creating a transaction object with the parameters described above
     # Number of coins is taken as a random small amount
     # This pretty much ensures that balance never goes below 0 and that all transaction generated are valid
     
-    transaction=Transaction(peer.id,dest,np.random.random()*2,8000,uuid.uuid4())
+    while(True):
+        start = np.random.randint(len(block.balances))
+        dest = np.random.randint(len(block.balances))
+        coins = np.random.random()*2
+        balances = get_balance(peer,block)
+        print(block)
+        if(balances[start]>=coins):
+            break 
+
+    transaction=Transaction(start,dest,coins,8000,uuid.uuid4())
+    # transaction=Transaction(peer.id,dest,np.random.random()*2,8000,uuid.uuid4())
     
     # dump_transaction(transaction)
     
@@ -58,6 +68,10 @@ def block_generation(peer,meanblocktime,current_time):
     # Finding the block in the chain that is to be mined upon
     prev_block = find_mining_block(peer)
     prev_blk_id = prev_block.blk_id
+    
+    print("Mean of exp dist "+str(meanblocktime/peer.hashingpower)+" of peer "+str(peer.id))
+    print("Current time "+str(current_time))
+    print("BLock will be mined in "+str(inter_arrival_time))
     
     # Choosing a random number of transactions from the generated transactions with a cap of 999 (1 left for coinbase transaction)
     # Since the transactions are generated while keeping the balances >=0 for all nodes, all transactions are valid
@@ -182,7 +196,7 @@ def validate(block,peer):
     
     # Get balances of all peers till the previous block ID
     balances = get_balance(peer,block.prev_blk_id).copy()
-    
+    print(balances)
     # For each transaction, we update the balances of the peers
     
     for transaction in block.transactions:
