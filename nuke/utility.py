@@ -8,8 +8,8 @@ MININGFEE = 50
 # Generation of a new transaction
 def transaction_generation(peer,block,meantransactiontime,current_time):
     
-    inter_arrival_time = np.random.exponential(scale=meantransactiontime) # Generating the inter-arrival time between 2 transactions
-    
+    inter_arrival_time = np.random.exponential(scale=meantransactiontime/1000) # Generating the inter-arrival time between 2 transactions in seconds
+    inter_arrival_time*=1000 # Converting back to milliseconds
     # Randomly fixing the destination ID of Peer, ensuring that sender is not the same as destination
     # dest=peer.id 
     
@@ -62,8 +62,9 @@ def find_mining_block(peer):
 def block_generation(peer,meanblocktime,current_time):
     
     # Generating the inter arrival time between 2 blocks
-    inter_arrival_time = np.random.exponential(scale=meanblocktime/peer.hashingpower)
-    
+    inter_arrival_time = np.random.exponential(scale=meanblocktime/(peer.hashingpower*1000)) #Converting mean block time to seconds
+    inter_arrival_time*=1000
+
     # Finding the block in the chain that is to be mined upon
     prev_block = find_mining_block(peer)
     prev_blk_id = prev_block.blk_id
@@ -91,7 +92,7 @@ def block_generation(peer,meanblocktime,current_time):
     # Creating a block object with the parameters described above
     
     block=Block(prev_blk_id,uuid.uuid4(),peer.id,peer.id,included_transactions,prev_block.depth+1,current_time+inter_arrival_time,[])
-    
+    print(str(block.prev_blk_id)+" -> "+str(block.blk_id))
     # Task is generated in the correct format specified in simulator.py 
     
     return ([current_time+inter_arrival_time,peer.id,'gen_block',block])
@@ -255,6 +256,9 @@ def add_cache(task_list,peer_list,peer,block,rho):
     rem_task=None
     # Iterating over all tasks that have been cached
     
+    advtasks = []
+    advreturn = []
+
     for nexttask in peer.cacheBlock:
         rem_task=nexttask
         if nexttask[4].prev_blk_id != block.blk_id:
@@ -263,6 +267,9 @@ def add_cache(task_list,peer_list,peer,block,rho):
         
         # When we find a block that comes next in chain
         
+        if(peer.id==0):
+            advtasks.append(rem_task)
+            continue
         # Update the depth of the cached block
         nexttask[4].depth=block.depth+1
         
@@ -294,6 +301,13 @@ def add_cache(task_list,peer_list,peer,block,rho):
             # Checking if there are any other blocks that build upon the current block
             return add_cache(task_list,peer_list,peer,block,rho)
     
+    for nexttask in advtasks:
+        peer.cacheBlock.remove(nexttask)
+        advreturn.append([nexttask[0], nexttask[1] , 'received_block' , nexttask[3] , nexttask[4]])
+
+    if (peer.id==0):
+        return advreturn
+
     if(check==0):
         return False
     elif(check==1):

@@ -15,6 +15,7 @@ class Block:
         self.depth=depth                            # Depth of this block in the blockchain
         self.time_of_arrival=time                   # Time at which this block was received by the Owner
         self.balances=balances.copy()               # The current balances of all Peers after including all transactions from the genesis block till this block (using .copy() to avoid assigning by reference which can lead to errors on modification)
+        self.main_chain = False
 
 class Transaction:
     def __init__(self,start,destination,coins,size,transaction_id):

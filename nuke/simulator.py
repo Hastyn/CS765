@@ -27,7 +27,7 @@ if __name__=='__main__':
     parser.add_argument("--meanblocktime", help='mean time between arrival of blocks in ms',type=float)
     parser.add_argument("--zeta", help='percentage of honest nodes an adversary is connected to',type=float)
     parser.add_argument("--advminingpower", help='percentage of hashing power the adversary has',type=float)
-
+    parser.add_argument("--stubborn", help='stubborn or selfish')
     
     args=parser.parse_args()
     peers=args.peers #Number of peers
@@ -45,8 +45,8 @@ if __name__=='__main__':
     # Defined format of tasks below
     
     #Priority Queue sorts tasks on basis of increasing order of first element, i.e. time
-    is_stubborn = False #boolean parameter true for stubborn mining and false for selfish mining
-
+    is_stubborn = args.stubborn=='true' #boolean parameter true for stubborn mining and false for selfish mining
+    print(is_stubborn)
     task_list = PriorityQueue() # [time , peer_ID , type_of_action          , ... ]
                                 # [                 'received_block'        , received_from, Block ]
                                 # [                 'received_transaction'  , received_from , Transaction ]
@@ -128,10 +128,11 @@ if __name__=='__main__':
 
         
     count=0 # Determining point till which to run simulation
-    
+    trans=0
+
     print("--------START------------")
     
-    while((not task_list.empty()) and (count<=500) ):
+    while((not task_list.empty()) and (count<=1000) ):
         
         # Get earliest scheduled task in task list
         
@@ -167,7 +168,7 @@ if __name__=='__main__':
                     continue
             print(count)
             count+=1 # Incrementing count
-            print("Block of "+str(block.miner_id)+" recieved by "+str(task[1]))
+            print("Block of "+str(block.miner_id)+" recieved by "+str(task[1])+" blk_ id: "+str(block.blk_id))
             # If parent does not exist, cache block
             
             if parent_depth == -1:
@@ -241,8 +242,8 @@ if __name__=='__main__':
                             peer_list[task[1]].private_chain = []
                             peer_list[task[1]].lead=0 
                         else:
+                            peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,peer_list[task[1]].private_chain[0].depth)
                             for adjacent in peer_list[task[1]].neighbors:
-                                peer_list[task[1]].max_depth=max(peer_list[task[1]].max_depth,peer_list[task[1]].private_chain[0].depth)
                                 ntask = broadcast_block(task[0],peer_list[task[1]].private_chain[0],peer_list[task[1]],peer_list[adjacent],rho)
                                 task_list.put(ntask)                    
                             peer_list[task[1]].private_chain = peer_list[task[1]].private_chain[1:]
@@ -262,7 +263,9 @@ if __name__=='__main__':
                         newtask = block_generation(peer_list[task[1]],meanblocktime,task[0])
                         # print("Added only:- ",newtask)
                         task_list.put(newtask)
-                # add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+                cachetasks = add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+                for cache in cachetasks:
+                    task_list.put(cache)
                 continue
 
 
@@ -292,7 +295,7 @@ if __name__=='__main__':
                 # print("Added only:- ",ntask)
 
             #Cached blocks can be added back now
-            # add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
+            add_cache(task_list,peer_list,peer_list[task[1]],block,rho)
 
             #Schedule next block generation
             newtask = block_generation(peer_list[task[1]],meanblocktime,task[0])
@@ -302,7 +305,6 @@ if __name__=='__main__':
             
             pass
         elif task[2] == 'received_transaction':
-            
             #If already received, skip rest
             if exists_transaction(task[4].transaction_id,peer_list[task[1]]) != -1:
                 continue
@@ -380,6 +382,34 @@ for i in range(peers):
     s = f"received_blocks/Peer{i}_Block_Details.out"
     f= open(s,'w')
     
+    mining_block = find_mining_block(peer_list[i])
+    while(mining_block.blk_id!=0):
+        # print(mining_block.blk_id)
+        mining_block.main_chain=True
+        for blk in peer_list[i].received_blocks:
+            if(blk.blk_id==mining_block.prev_blk_id):
+                mining_block=blk
+                break
+    
+    adv_main_chain =0
+    adv_total =0
+    main_chain =0
+    total_blocks =0
+
+    for block in peer_list[i].received_blocks:
+        if(block.main_chain and block.miner_id==0):
+            adv_main_chain+=1
+        if(block.main_chain):
+            main_chain+=1
+        if(block.miner_id==0):
+            adv_total+=1
+        total_blocks+=1
+
+    print("MPU ADV at node "+str(i)+" is " + str(adv_main_chain/adv_total))
+    print("MPU OVERALL at node "+str(i)+" is " + str(main_chain/total_blocks))
+    print("ADV blocks in main chain in: "+str(adv_main_chain/main_chain))
+    print()
+
     for block in peer_list[i].received_blocks:
         f.write(str(block.blk_id)+" "+str(block.prev_blk_id)+" "+str(block.time_of_arrival)+" "+str(block.miner_id)+"\n")
         # dump(block)
